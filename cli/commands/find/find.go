@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gruntwork-io/terragrunt/pkg/log"
 	"github.com/gruntwork-io/terragrunt/telemetry"
+	"github.com/gruntwork-io/terragrunt/util"
 
 	"github.com/gruntwork-io/terragrunt/config"
 	"github.com/gruntwork-io/terragrunt/internal/discovery"
@@ -16,7 +18,7 @@ import (
 )
 
 // Run runs the find command.
-func Run(ctx context.Context, opts *Options) error {
+func Run(ctx context.Context, l log.Logger, opts *Options) error {
 	d := discovery.
 		NewDiscovery(opts.WorkingDir).
 		WithSuppressParseErrors()
@@ -35,6 +37,10 @@ func Run(ctx context.Context, opts *Options) error {
 
 	if opts.Exclude {
 		d = d.WithParseExclude()
+	}
+
+	if opts.Include {
+		d = d.WithParseInclude()
 	}
 
 	if opts.QueueConstructAs != "" {
@@ -56,12 +62,12 @@ func Run(ctx context.Context, opts *Options) error {
 		"mode":         opts.Mode,
 		"exclude":      opts.Exclude,
 	}, func(ctx context.Context) error {
-		cfgs, discoverErr = d.Discover(ctx, opts.TerragruntOptions)
+		cfgs, discoverErr = d.Discover(ctx, l, opts.TerragruntOptions)
 		return discoverErr
 	})
 
 	if err != nil {
-		opts.Logger.Debugf("Errors encountered while discovering configurations:\n%s", err)
+		l.Debugf("Errors encountered while discovering configurations:\n%s", err)
 	}
 
 	switch opts.Mode {
@@ -107,7 +113,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 	switch opts.Format {
 	case FormatText:
-		return outputText(opts, foundCfgs)
+		return outputText(l, opts, foundCfgs)
 	case FormatJSON:
 		return outputJSON(opts, foundCfgs)
 	default:
@@ -124,6 +130,7 @@ type FoundConfig struct {
 	Path string               `json:"path"`
 
 	Exclude *config.ExcludeConfig `json:"exclude,omitempty"`
+	Include map[string]string     `json:"include,omitempty"`
 
 	Dependencies []string `json:"dependencies,omitempty"`
 }
@@ -159,6 +166,16 @@ func discoveredToFound(configs discovery.DiscoveredConfigs, opts *Options) (Foun
 
 		if opts.Exclude && config.Parsed != nil && config.Parsed.Exclude != nil {
 			foundCfg.Exclude = config.Parsed.Exclude.Clone()
+		}
+
+		if opts.Include && config.Parsed != nil && config.Parsed.ProcessedIncludes != nil {
+			foundCfg.Include = make(map[string]string, len(config.Parsed.ProcessedIncludes))
+			for _, v := range config.Parsed.ProcessedIncludes {
+				foundCfg.Include[v.Name], err = util.GetPathRelativeTo(v.Path, opts.RootWorkingDir)
+				if err != nil {
+					errs = append(errs, errors.New(err))
+				}
+			}
 		}
 
 		if !opts.Dependencies || len(config.Dependencies) == 0 {
@@ -257,8 +274,8 @@ func (c *Colorizer) Colorize(config *FoundConfig) string {
 }
 
 // outputText outputs the discovered configurations in text format.
-func outputText(opts *Options, configs FoundConfigs) error {
-	colorizer := NewColorizer(shouldColor(opts))
+func outputText(l log.Logger, opts *Options, configs FoundConfigs) error {
+	colorizer := NewColorizer(shouldColor(l))
 
 	for _, config := range configs {
 		_, err := opts.Writer.Write([]byte(colorizer.Colorize(config) + "\n"))
@@ -271,8 +288,8 @@ func outputText(opts *Options, configs FoundConfigs) error {
 }
 
 // shouldColor returns true if the output should be colored.
-func shouldColor(opts *Options) bool {
-	return !(opts.TerragruntOptions.Logger.Formatter().DisabledColors() || isStdoutRedirected())
+func shouldColor(l log.Logger) bool {
+	return !l.Formatter().DisabledColors() && !isStdoutRedirected()
 }
 
 // isStdoutRedirected returns true if the stdout is redirected.

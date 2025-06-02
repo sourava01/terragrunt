@@ -1,15 +1,13 @@
 module github.com/gruntwork-io/terragrunt
 
-go 1.23.0
-
-toolchain go1.23.5
+go 1.24
 
 require (
-	cloud.google.com/go/storage v1.51.0
+	cloud.google.com/go/storage v1.54.0
 	dario.cat/mergo v1.0.1
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/ProtonMail/go-crypto v1.2.0
-	github.com/aws/aws-sdk-go v1.55.6
+	github.com/aws/aws-sdk-go v1.55.7
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.4
@@ -60,25 +58,25 @@ require (
 	github.com/terraform-linters/tflint v0.55.0
 	github.com/urfave/cli/v2 v2.27.6
 	github.com/zclconf/go-cty v1.16.2
-	go.opentelemetry.io/otel v1.35.0
+	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.35.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.35.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.35.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.35.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.36.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.35.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.35.0
-	go.opentelemetry.io/otel/metric v1.35.0
-	go.opentelemetry.io/otel/sdk v1.35.0
+	go.opentelemetry.io/otel/metric v1.36.0
+	go.opentelemetry.io/otel/sdk v1.36.0
 	go.opentelemetry.io/otel/sdk/metric v1.35.0
-	go.opentelemetry.io/otel/trace v1.35.0
+	go.opentelemetry.io/otel/trace v1.36.0
 	golang.org/x/mod v0.24.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sync v0.14.0
-	golang.org/x/sys v0.32.0
-	golang.org/x/term v0.31.0
-	golang.org/x/text v0.24.0
+	golang.org/x/sys v0.33.0
+	golang.org/x/term v0.32.0
+	golang.org/x/text v0.25.0
 	google.golang.org/api v0.232.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/ini.v1 v1.67.0
 )
@@ -86,6 +84,7 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.2
 	github.com/charmbracelet/x/term v0.2.1
+	go.uber.org/mock v0.5.2
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 )
 
@@ -94,13 +93,13 @@ require (
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
 	cel.dev/expr v0.22.1 // indirect
-	cloud.google.com/go v0.120.0 // indirect
+	cloud.google.com/go v0.121.0 // indirect
 	cloud.google.com/go/auth v0.16.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
-	cloud.google.com/go/iam v1.4.2 // indirect
+	cloud.google.com/go/iam v1.5.2 // indirect
 	cloud.google.com/go/kms v1.21.1 // indirect
-	cloud.google.com/go/longrunning v0.6.6 // indirect
+	cloud.google.com/go/longrunning v0.6.7 // indirect
 	cloud.google.com/go/monitoring v1.24.1 // indirect
 	filippo.io/age v1.2.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -165,6 +164,7 @@ require (
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cenkalti/backoff/v5 v5.0.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.3.0 // indirect
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
@@ -183,7 +183,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/getsops/gopgagent v0.0.0-20241224165529-7044f28e491e // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
@@ -256,7 +256,6 @@ require (
 	github.com/spf13/afero v1.12.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.5.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/terraform-linters/tflint-plugin-sdk v0.22.0 // indirect
 	github.com/terraform-linters/tflint-ruleset-terraform v0.10.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
@@ -275,15 +274,15 @@ require (
 	go.opentelemetry.io/contrib/detectors/gcp v1.35.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.35.0 // indirect
-	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/net v0.39.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.36.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.7.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect
 	google.golang.org/genproto v0.0.0-20250324211829-b45e905df463 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250324211829-b45e905df463 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect

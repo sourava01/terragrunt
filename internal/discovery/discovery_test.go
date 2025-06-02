@@ -1,13 +1,13 @@
 package discovery_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/gruntwork-io/terragrunt/internal/discovery"
 	"github.com/gruntwork-io/terragrunt/options"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -80,7 +80,7 @@ func TestDiscovery(t *testing.T) {
 			opts, err := options.NewTerragruntOptionsForTest(tmpDir)
 			require.NoError(t, err)
 
-			configs, err := tt.discovery.Discover(context.Background(), opts)
+			configs, err := tt.discovery.Discover(t.Context(), logger.CreateLogger(), opts)
 			if !tt.errorExpected {
 				require.NoError(t, err)
 			}
@@ -259,7 +259,7 @@ func TestDiscoveryWithDependencies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			configs, err := tt.discovery.Discover(context.Background(), opts)
+			configs, err := tt.discovery.Discover(t.Context(), logger.CreateLogger(), opts)
 			if tt.errorExpected {
 				require.Error(t, err)
 				return
@@ -440,12 +440,15 @@ exclude {
 
 	tgOpts := options.NewTerragruntOptions()
 	tgOpts.WorkingDir = tmpDir
-	tgOpts.Logger.Formatter().SetDisabledColors(true)
+
+	l := logger.CreateLogger()
+
+	l.Formatter().SetDisabledColors(true)
 
 	// Test discovery with exclude parsing
 	d := discovery.NewDiscovery(tmpDir).WithParseExclude()
 
-	cfgs, err := d.Discover(context.Background(), tgOpts)
+	cfgs, err := d.Discover(t.Context(), l, tgOpts)
 	require.NoError(t, err)
 
 	// Verify we found all configurations

@@ -1,7 +1,6 @@
 package list_test
 
 import (
-	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"github.com/gruntwork-io/terragrunt/cli/commands/list"
 	"github.com/gruntwork-io/terragrunt/internal/discovery"
 	"github.com/gruntwork-io/terragrunt/options"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -52,7 +52,6 @@ func TestBasicDiscovery(t *testing.T) {
 
 	tgOpts := options.NewTerragruntOptions()
 	tgOpts.WorkingDir = tmpDir
-	tgOpts.Logger.Formatter().SetDisabledColors(true)
 
 	// Create options
 	opts := list.NewOptions(tgOpts)
@@ -68,7 +67,11 @@ func TestBasicDiscovery(t *testing.T) {
 	// Set the writer in options
 	opts.Writer = w
 
-	err = list.Run(context.Background(), opts)
+	l := logger.CreateLogger()
+
+	l.Formatter().SetDisabledColors(true)
+
+	err = list.Run(t.Context(), l, opts)
 	require.NoError(t, err)
 
 	// Close the write end of the pipe
@@ -135,7 +138,9 @@ func TestHiddenDiscovery(t *testing.T) {
 
 	tgOpts := options.NewTerragruntOptions()
 	tgOpts.WorkingDir = tmpDir
-	tgOpts.Logger.Formatter().SetDisabledColors(true)
+
+	l := logger.CreateLogger()
+	l.Formatter().SetDisabledColors(true)
 
 	// Create options
 	opts := list.NewOptions(tgOpts)
@@ -151,7 +156,7 @@ func TestHiddenDiscovery(t *testing.T) {
 	// Set the writer in options
 	opts.Writer = w
 
-	err = list.Run(context.Background(), opts)
+	err = list.Run(t.Context(), l, opts)
 	require.NoError(t, err)
 
 	// Close the write end of the pipe
@@ -217,7 +222,9 @@ dependency "unit2" {
 
 	tgOpts := options.NewTerragruntOptions()
 	tgOpts.WorkingDir = tmpDir
-	tgOpts.Logger.Formatter().SetDisabledColors(true)
+
+	l := logger.CreateLogger()
+	l.Formatter().SetDisabledColors(true)
 
 	// Create options
 	opts := list.NewOptions(tgOpts)
@@ -233,7 +240,7 @@ dependency "unit2" {
 	// Set the writer in options
 	opts.Writer = w
 
-	err = list.Run(context.Background(), opts)
+	err = list.Run(t.Context(), l, opts)
 	require.NoError(t, err)
 
 	// Close the write end of the pipe
@@ -294,7 +301,9 @@ dependency "unit3" {
 
 	tgOpts := options.NewTerragruntOptions()
 	tgOpts.WorkingDir = tmpDir
-	tgOpts.Logger.Formatter().SetDisabledColors(true)
+
+	l := logger.CreateLogger()
+	l.Formatter().SetDisabledColors(true)
 
 	// Create options
 	opts := list.NewOptions(tgOpts)
@@ -310,7 +319,7 @@ dependency "unit3" {
 	// Set the writer in options
 	opts.Writer = w
 
-	err = list.Run(context.Background(), opts)
+	err = list.Run(t.Context(), l, opts)
 	require.NoError(t, err)
 
 	// Close the write end of the pipe
@@ -403,7 +412,10 @@ dependency "C" {
 
 	tgOpts := options.NewTerragruntOptions()
 	tgOpts.WorkingDir = tmpDir
-	tgOpts.Logger.Formatter().SetDisabledColors(true)
+
+	l := logger.CreateLogger()
+
+	l.Formatter().SetDisabledColors(true)
 
 	// Create options
 	opts := list.NewOptions(tgOpts)
@@ -419,7 +431,7 @@ dependency "C" {
 	// Set the writer in options
 	opts.Writer = w
 
-	err = list.Run(context.Background(), opts)
+	err = list.Run(t.Context(), l, opts)
 	require.NoError(t, err)
 
 	// Close the write end of the pipe

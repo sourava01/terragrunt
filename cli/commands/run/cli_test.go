@@ -1,12 +1,12 @@
 package run_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/gruntwork-io/terragrunt/cli/commands/run"
 	"github.com/gruntwork-io/terragrunt/internal/cli"
 	"github.com/gruntwork-io/terragrunt/options"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,10 +42,10 @@ func TestAction(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			fn := run.Action(tc.opts)
+			fn := run.Action(logger.CreateLogger(), tc.opts)
 
-			ctx := cli.NewAppContext(context.Background(), cli.NewApp(), nil).
-				NewCommandContext(run.NewCommand(tc.opts), []string{"bar"})
+			ctx := cli.NewAppContext(t.Context(), cli.NewApp(), nil).
+				NewCommandContext(run.NewCommand(logger.CreateLogger(), tc.opts), []string{"bar"})
 
 			err := fn(ctx)
 			if tc.expectedErr != nil {

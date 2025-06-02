@@ -2,7 +2,6 @@ package test_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/gruntwork-io/terragrunt/options"
 	"github.com/gruntwork-io/terragrunt/test/helpers"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/gruntwork-io/terragrunt/tf"
 	"github.com/gruntwork-io/terragrunt/util"
 	"github.com/stretchr/testify/assert"
@@ -54,9 +54,12 @@ func TestDebugGeneratedInputs(t *testing.T) {
 	mockOptions, err := options.NewTerragruntOptionsForTest("integration_test")
 	require.NoError(t, err)
 	mockOptions.WorkingDir = rootPath
+
+	l := logger.CreateLogger()
+
 	require.NoError(
 		t,
-		tf.RunCommand(context.Background(), mockOptions, "apply", "-auto-approve", "-var-file", debugFile),
+		tf.RunCommand(t.Context(), l, mockOptions, "apply", "-auto-approve", "-var-file", debugFile),
 	)
 
 	stdout = bytes.Buffer{}

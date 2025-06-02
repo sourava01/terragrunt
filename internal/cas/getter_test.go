@@ -1,12 +1,11 @@
 package cas_test
 
 import (
-	"context"
 	"net/url"
 	"testing"
 
 	"github.com/gruntwork-io/terragrunt/internal/cas"
-	"github.com/gruntwork-io/terragrunt/pkg/log"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/hashicorp/go-getter/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +18,7 @@ func TestCASGetterMode(t *testing.T) {
 	testURL, err := url.Parse("https://github.com/gruntwork-io/terragrunt")
 	require.NoError(t, err)
 
-	mode, err := g.Mode(context.Background(), testURL)
+	mode, err := g.Mode(t.Context(), testURL)
 	require.NoError(t, err)
 	assert.Equal(t, getter.ModeDir, mode)
 }
@@ -28,7 +27,7 @@ func TestCASGetterGetFile(t *testing.T) {
 	t.Parallel()
 
 	g := cas.NewCASGetter(nil, nil, &cas.CloneOptions{})
-	err := g.GetFile(context.Background(), &getter.Request{})
+	err := g.GetFile(t.Context(), &getter.Request{})
 	require.Error(t, err)
 	assert.Equal(t, "GetFile not implemented", err.Error())
 }
@@ -81,7 +80,7 @@ func TestCASGetterGet(t *testing.T) {
 		Branch: "main",
 	}
 
-	l := log.New()
+	l := logger.CreateLogger()
 
 	g := cas.NewCASGetter(&l, c, opts)
 	client := getter.Client{
@@ -108,7 +107,7 @@ func TestCASGetterGet(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			res, err := client.Get(
-				context.TODO(),
+				t.Context(),
 				&getter.Request{
 					Src: tt.url,
 					Dst: tmpDir,

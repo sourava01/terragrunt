@@ -2,11 +2,11 @@ package shell_test
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/gruntwork-io/terragrunt/internal/cache"
 	"github.com/gruntwork-io/terragrunt/shell"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -19,10 +19,12 @@ func TestRunShellCommand(t *testing.T) {
 	terragruntOptions, err := options.NewTerragruntOptionsForTest("")
 	require.NoError(t, err, "Unexpected error creating NewTerragruntOptionsForTest: %v", err)
 
-	cmd := shell.RunCommand(context.Background(), terragruntOptions, "tofu", "--version")
+	l := logger.CreateLogger()
+
+	cmd := shell.RunCommand(t.Context(), l, terragruntOptions, "tofu", "--version")
 	require.NoError(t, cmd)
 
-	cmd = shell.RunCommand(context.Background(), terragruntOptions, "tofu", "not-a-real-command")
+	cmd = shell.RunCommand(t.Context(), l, terragruntOptions, "tofu", "not-a-real-command")
 	require.Error(t, cmd)
 }
 
@@ -38,7 +40,9 @@ func TestRunShellOutputToStderrAndStdout(t *testing.T) {
 	terragruntOptions.Writer = stdout
 	terragruntOptions.ErrWriter = stderr
 
-	cmd := shell.RunCommand(context.Background(), terragruntOptions, "tofu", "--version")
+	l := logger.CreateLogger()
+
+	cmd := shell.RunCommand(t.Context(), l, terragruntOptions, "tofu", "--version")
 	require.NoError(t, cmd)
 
 	assert.Contains(t, stdout.String(), "OpenTofu", "Output directed to stdout")
@@ -51,7 +55,7 @@ func TestRunShellOutputToStderrAndStdout(t *testing.T) {
 	terragruntOptions.Writer = stderr
 	terragruntOptions.ErrWriter = stderr
 
-	cmd = shell.RunCommand(context.Background(), terragruntOptions, "tofu", "--version")
+	cmd = shell.RunCommand(t.Context(), l, terragruntOptions, "tofu", "--version")
 	require.NoError(t, cmd)
 
 	assert.Contains(t, stderr.String(), "OpenTofu", "Output directed to stderr")
@@ -76,17 +80,18 @@ func TestLastReleaseTag(t *testing.T) {
 
 func TestGitLevelTopDirCaching(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = cache.ContextWithCache(ctx)
 	c := cache.ContextCache[string](ctx, cache.RunCmdCacheContextKey)
 	assert.NotNil(t, c)
 	assert.Empty(t, c.Cache)
 	terragruntOptions, err := options.NewTerragruntOptionsForTest("")
 	require.NoError(t, err)
+	l := logger.CreateLogger()
 	path := "."
-	path1, err := shell.GitTopLevelDir(ctx, terragruntOptions, path)
+	path1, err := shell.GitTopLevelDir(ctx, l, terragruntOptions, path)
 	require.NoError(t, err)
-	path2, err := shell.GitTopLevelDir(ctx, terragruntOptions, path)
+	path2, err := shell.GitTopLevelDir(ctx, l, terragruntOptions, path)
 	require.NoError(t, err)
 	assert.Equal(t, path1, path2)
 	assert.Len(t, c.Cache, 1)

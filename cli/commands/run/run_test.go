@@ -2,7 +2,6 @@ package run_test
 
 import (
 	"bytes"
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +11,7 @@ import (
 	"github.com/gruntwork-io/terragrunt/internal/errors"
 	"github.com/gruntwork-io/terragrunt/options"
 	"github.com/gruntwork-io/terragrunt/pkg/log"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/gruntwork-io/terragrunt/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -74,7 +74,8 @@ func TestSetTerragruntInputsAsEnvVars(t *testing.T) {
 
 			cfg := &config.TerragruntConfig{Inputs: tc.inputsInConfig}
 
-			require.NoError(t, run.SetTerragruntInputsAsEnvVars(opts, cfg))
+			l := logger.CreateLogger()
+			require.NoError(t, run.SetTerragruntInputsAsEnvVars(l, opts, cfg))
 
 			assert.Equal(t, tc.expected, opts.Env)
 		})
@@ -264,7 +265,8 @@ func TestTerragruntHandlesCatastrophicTerraformFailure(t *testing.T) {
 
 	// Use a path that doesn't exist to induce error
 	tgOptions.TerraformPath = "i-dont-exist"
-	err = run.RunTerraformWithRetry(context.Background(), tgOptions)
+	l := logger.CreateLogger()
+	err = run.RunTerraformWithRetry(t.Context(), l, tgOptions)
 	require.Error(t, err)
 }
 
@@ -323,7 +325,8 @@ func TestToTerraformEnvVars(t *testing.T) {
 			t.Parallel()
 			opts, err := options.NewTerragruntOptionsForTest("")
 			require.NoError(t, err)
-			actual, err := run.ToTerraformEnvVars(opts, tc.vars)
+			l := logger.CreateLogger()
+			actual, err := run.ToTerraformEnvVars(l, opts, tc.vars)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, actual)
 		})
@@ -446,7 +449,8 @@ func TestFilterTerraformExtraArgs(t *testing.T) {
 			Terraform: &config.TerraformConfig{ExtraArgs: []config.TerraformExtraArguments{tc.extraArgs}},
 		}
 
-		out := run.FilterTerraformExtraArgs(tc.options, &config)
+		l := logger.CreateLogger()
+		out := run.FilterTerraformExtraArgs(l, tc.options, &config)
 
 		assert.Equal(t, tc.expectedArgs, out)
 	}
@@ -488,7 +492,6 @@ func mockOptions(t *testing.T, terragruntConfigPath string, workingDir string, t
 	opts.Source = terragruntSource
 	opts.IgnoreDependencyErrors = ignoreDependencyErrors
 	opts.IncludeExternalDependencies = includeExternalDependencies
-	opts.Logger.SetOptions(log.WithLevel(logLevel))
 	opts.Debug = debug
 
 	return opts

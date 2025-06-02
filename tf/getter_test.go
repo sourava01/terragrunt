@@ -1,13 +1,12 @@
 package tf_test
 
 import (
-	"context"
 	"net/url"
 	"path/filepath"
 	"testing"
 
 	"github.com/gruntwork-io/terragrunt/options"
-	"github.com/gruntwork-io/terragrunt/pkg/log"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/gruntwork-io/terragrunt/tf"
 	"github.com/gruntwork-io/terratest/modules/files"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +16,7 @@ import (
 func TestGetModuleRegistryURLBasePath(t *testing.T) {
 	t.Parallel()
 
-	basePath, err := tf.GetModuleRegistryURLBasePath(context.Background(), log.New(), "registry.terraform.io")
+	basePath, err := tf.GetModuleRegistryURLBasePath(t.Context(), logger.CreateLogger(), "registry.terraform.io")
 	require.NoError(t, err)
 	assert.Equal(t, "/v1/modules/", basePath)
 }
@@ -30,7 +29,7 @@ func TestGetTerraformHeader(t *testing.T) {
 		Host:   "registry.terraform.io",
 		Path:   "/v1/modules/terraform-aws-modules/vpc/aws/3.3.0/download",
 	}
-	terraformGetHeader, err := tf.GetTerraformGetHeader(context.Background(), log.New(), testModuleURL)
+	terraformGetHeader, err := tf.GetTerraformGetHeader(t.Context(), logger.CreateLogger(), testModuleURL)
 	require.NoError(t, err)
 	assert.Contains(t, terraformGetHeader, "github.com/terraform-aws-modules/terraform-aws-vpc")
 }
@@ -117,6 +116,7 @@ func TestTFRGetterRootDir(t *testing.T) {
 	tfrGetter := new(tf.RegistryGetter)
 	tfrGetter.TerragruntOptions, err = options.NewTerragruntOptionsForTest("")
 	require.NoError(t, err)
+
 	require.NoError(t, tfrGetter.Get(moduleDestPath, testModuleURL))
 	assert.True(t, files.FileExists(filepath.Join(moduleDestPath, "main.tf")))
 }
@@ -135,6 +135,7 @@ func TestTFRGetterSubModule(t *testing.T) {
 
 	tfrGetter := new(tf.RegistryGetter)
 	tfrGetter.TerragruntOptions, _ = options.NewTerragruntOptionsForTest("")
+
 	require.NoError(t, tfrGetter.Get(moduleDestPath, testModuleURL))
 	assert.True(t, files.FileExists(filepath.Join(moduleDestPath, "main.tf")))
 }

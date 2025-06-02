@@ -1,7 +1,6 @@
 package find_test
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/gruntwork-io/terragrunt/cli/commands/find"
 	"github.com/gruntwork-io/terragrunt/internal/discovery"
 	"github.com/gruntwork-io/terragrunt/options"
+	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -417,7 +417,9 @@ dependency "B" {
 
 			tgOpts := options.NewTerragruntOptions()
 			tgOpts.WorkingDir = tmpDir
-			tgOpts.Logger.Formatter().SetDisabledColors(true)
+
+			l := logger.CreateLogger()
+			l.Formatter().SetDisabledColors(true)
 
 			// Create options
 			opts := find.NewOptions(tgOpts)
@@ -434,7 +436,7 @@ dependency "B" {
 			// Set the writer in options
 			opts.Writer = w
 
-			err = find.Run(context.Background(), opts)
+			err = find.Run(t.Context(), l, opts)
 			if tt.format == "invalid" || tt.mode == "invalid" {
 				require.Error(t, err)
 				return

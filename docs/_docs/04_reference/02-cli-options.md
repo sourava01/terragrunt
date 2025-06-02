@@ -480,7 +480,7 @@ terragrunt backend migrate old-unit new-unit
 
 This command will migrate the OpenTofu/Terraform state backend from the old unit to the new unit.
 
-You will typically want to use this command if you are using a `key` attribute for your `remote_state` block that uses the `relative_path_to_include` function, and you want to rename the unit.
+You will typically want to use this command if you are using a `key` attribute for your `remote_state` block that uses the `path_relative_to_include` function, and you want to rename the unit.
 
 For example, given the following filesystem structure:
 
@@ -795,6 +795,42 @@ $ terragrunt find --dependencies --format=json | jq
     "type": "unit",
     "path": "unitB",
     "dependencies": ["../unitA"]
+  }
+]
+```
+
+##### Find Include
+
+You can also include include configuration in the output using the `--include` flag. When enabled, the JSON output will include the configurations of the `include` block in the discovered units.
+
+```bash
+$ terragrunt find --include --format=json | jq
+[
+  {
+    "type": "unit",
+    "path": "bar",
+    "include": {
+      "cloud": "cloud.hcl"
+    }
+  },
+  {
+    "type": "unit",
+    "path": "foo"
+  }
+]
+```
+
+You can use tools like `jq` to filter the output and get all the units that include a specific configuration.
+
+```bash
+$ terragrunt find --include --format=json | jq '[.[] | select(.include.cloud == "cloud.hcl")]'
+[
+  {
+    "type": "unit",
+    "path": "bar",
+    "include": {
+      "cloud": "cloud.hcl"
+    }
   }
 ]
 ```

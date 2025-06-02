@@ -6,6 +6,7 @@ import (
 	"github.com/gruntwork-io/terragrunt/cli/flags"
 	"github.com/gruntwork-io/terragrunt/internal/cli"
 	"github.com/gruntwork-io/terragrunt/options"
+	"github.com/gruntwork-io/terragrunt/pkg/log"
 )
 
 const (
@@ -23,6 +24,7 @@ const (
 	Dependencies   = "dependencies"
 	External       = "external"
 	Exclude        = "exclude"
+	Include        = "include"
 
 	QueueConstructAsFlagName  = "queue-construct-as"
 	QueueConstructAsFlagAlias = "as"
@@ -71,6 +73,12 @@ func NewFlags(opts *Options, prefix flags.Prefix) cli.Flags {
 			Usage:       "Display exclude configurations in the results (only when using --format=json).",
 		}),
 		flags.NewFlag(&cli.BoolFlag{
+			Name:        Include,
+			EnvVars:     tgPrefix.EnvVars(Include),
+			Destination: &opts.Include,
+			Usage:       "Display include configurations in the results (only when using --format=json).",
+		}),
+		flags.NewFlag(&cli.BoolFlag{
 			Name:        External,
 			EnvVars:     tgPrefix.EnvVars(External),
 			Destination: &opts.External,
@@ -86,7 +94,7 @@ func NewFlags(opts *Options, prefix flags.Prefix) cli.Flags {
 	}
 }
 
-func NewCommand(opts *options.TerragruntOptions) *cli.Command {
+func NewCommand(l log.Logger, opts *options.TerragruntOptions) *cli.Command {
 	cmdOpts := NewOptions(opts)
 
 	return &cli.Command{
@@ -116,7 +124,7 @@ func NewCommand(opts *options.TerragruntOptions) *cli.Command {
 			return nil
 		},
 		Action: func(ctx *cli.Context) error {
-			return Run(ctx, cmdOpts)
+			return Run(ctx, l, cmdOpts)
 		},
 	}
 }
