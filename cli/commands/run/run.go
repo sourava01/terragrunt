@@ -815,7 +815,7 @@ func FilterTerraformExtraArgs(l log.Logger, opts *options.TerragruntOptions, ter
 	for _, arg := range terragruntConfig.Terraform.ExtraArgs {
 		for _, argCmd := range arg.Commands {
 			if cmd == argCmd {
-				lastArg := terragruntOptions.TerraformCliArgs.CommandNameN(1)
+				lastArg := opts.TerraformCliArgs.CommandNameN(1)
 
 				skipVars := (cmd == tf.CommandNameApply || cmd == tf.CommandNameDestroy) && util.IsFile(lastArg)
 
