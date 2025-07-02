@@ -17,6 +17,7 @@ import (
 	"github.com/gruntwork-io/terragrunt/internal/cache"
 	"github.com/gruntwork-io/terragrunt/internal/experiment"
 	"github.com/gruntwork-io/terragrunt/internal/remotestate"
+	"github.com/gruntwork-io/terragrunt/internal/report"
 	"github.com/gruntwork-io/terragrunt/pkg/log"
 
 	s3backend "github.com/gruntwork-io/terragrunt/internal/remotestate/backend/s3"
@@ -413,8 +414,6 @@ func dependencyBlocksToCtyValue(ctx *ParsingContext, l log.Logger, dependencyCon
 	dependencyErrGroup, _ := errgroup.WithContext(ctx)
 
 	for _, dependencyConfig := range dependencyConfigs {
-		dependencyConfig := dependencyConfig // https://golang.org/doc/faq#closures_and_goroutines
-
 		dependencyErrGroup.Go(func() error {
 			// Loose struct to hold the attributes of the dependency. This includes:
 			// - outputs: The module outputs of the target config
@@ -1102,7 +1101,7 @@ func runTerragruntOutputJSON(ctx *ParsingContext, l log.Logger, targetConfig str
 	newOpts.Writer = stdoutBufferWriter
 	ctx = ctx.WithTerragruntOptions(&newOpts)
 
-	err := ctx.TerragruntOptions.RunTerragrunt(ctx, l, ctx.TerragruntOptions)
+	err := ctx.TerragruntOptions.RunTerragrunt(ctx, l, ctx.TerragruntOptions, report.NewReport())
 	if err != nil {
 		return nil, errors.New(err)
 	}

@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/gruntwork-io/terragrunt/internal/cas"
 	"github.com/gruntwork-io/terragrunt/test/helpers/logger"
@@ -28,7 +27,7 @@ func TestIntegration_CloneAndReuse(t *testing.T) {
 			StorePath: storePath,
 		})
 		require.NoError(t, err)
-		require.NoError(t, cas1.Clone(t.Context(), &l, &cas.CloneOptions{
+		require.NoError(t, cas1.Clone(t.Context(), l, &cas.CloneOptions{
 			Dir: firstClonePath,
 		}, "https://github.com/gruntwork-io/terragrunt.git"))
 
@@ -43,7 +42,7 @@ func TestIntegration_CloneAndReuse(t *testing.T) {
 			StorePath: storePath,
 		})
 		require.NoError(t, err)
-		require.NoError(t, cas2.Clone(t.Context(), &l, &cas.CloneOptions{
+		require.NoError(t, cas2.Clone(t.Context(), l, &cas.CloneOptions{
 			Dir: secondClonePath,
 		}, "https://github.com/gruntwork-io/terragrunt.git"))
 
@@ -69,7 +68,7 @@ func TestIntegration_CloneAndReuse(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = c.Clone(t.Context(), &l, &cas.CloneOptions{
+		err = c.Clone(t.Context(), l, &cas.CloneOptions{
 			Dir:    filepath.Join(tempDir, "repo"),
 			Branch: "nonexistent-branch",
 		}, "https://github.com/gruntwork-io/terragrunt.git")
@@ -88,7 +87,7 @@ func TestIntegration_CloneAndReuse(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = c.Clone(t.Context(), &l, &cas.CloneOptions{
+		err = c.Clone(t.Context(), l, &cas.CloneOptions{
 			Dir: filepath.Join(tempDir, "repo"),
 		}, "https://github.com/yhakbar/nonexistent-repo.git")
 		require.Error(t, err)
@@ -115,12 +114,15 @@ func TestIntegration_TreeStorage(t *testing.T) {
 			StorePath: storePath,
 		})
 		require.NoError(t, err)
-		require.NoError(t, c.Clone(ctx, &l, &cas.CloneOptions{
+		require.NoError(t, c.Clone(ctx, l, &cas.CloneOptions{
 			Dir: filepath.Join(tempDir, "repo"),
 		}, "https://github.com/gruntwork-io/terragrunt.git"))
 
 		// Get the commit hash
-		git := cas.NewGitRunner().WithWorkDir(filepath.Join(tempDir, "repo"))
+		git, err := cas.NewGitRunner()
+		require.NoError(t, err)
+
+		git = git.WithWorkDir(filepath.Join(tempDir, "repo"))
 		results, err := git.LsRemote(ctx, "https://github.com/gruntwork-io/terragrunt.git", "HEAD")
 		require.NoError(t, err)
 		require.NotEmpty(t, results)
@@ -129,7 +131,7 @@ func TestIntegration_TreeStorage(t *testing.T) {
 		// Verify the tree object is stored
 		store := cas.NewStore(storePath)
 		require.NoError(t, err)
-		assert.False(t, store.NeedsWrite(commitHash, time.Now()), "Tree object should be stored")
+		assert.False(t, store.NeedsWrite(commitHash), "Tree object should be stored")
 
 		// Verify we can read the tree content
 		content := cas.NewContent(store)

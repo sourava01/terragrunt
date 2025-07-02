@@ -566,15 +566,7 @@ func TestPreventDestroyDependencies(t *testing.T) {
 	helpers.LogBufferContentsLineByLine(t, destroyAllStdout, "destroy-all stdout")
 	helpers.LogBufferContentsLineByLine(t, destroyAllStderr, "destroy-all stderr")
 
-	require.Error(t, err)
-
-	var multiErrors *errors.MultiError
-
-	if ok := errors.As(err, &multiErrors); ok {
-		err = multiErrors
-	}
-
-	assert.IsType(t, &errors.MultiError{}, err)
+	require.NoError(t, err)
 
 	// Check that modules C, D and E were deleted and modules A and B weren't.
 	for moduleName, modulePath := range modulePaths {
@@ -602,4 +594,51 @@ func TestPreventDestroyDependencies(t *testing.T) {
 			assert.NotContains(t, output, "Hello, Module E")
 		}
 	}
+}
+
+func TestDownloadWithCASEnabled(t *testing.T) {
+	t.Parallel()
+
+	fixturePath := "fixtures/download/remote"
+
+	tmpEnvPath := helpers.CopyEnvironment(t, fixturePath)
+	testPath := util.JoinPath(tmpEnvPath, fixturePath)
+	helpers.CleanupTerraformFolder(t, testPath)
+
+	// Run with CAS experiment enabled
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd := "terragrunt apply --auto-approve --non-interactive --experiment cas --log-level debug --working-dir " + testPath
+	err := helpers.RunTerragruntCommand(t, cmd, &stdout, &stderr)
+	require.NoError(t, err)
+
+	assert.Contains(t, stderr.String(), "Downloading Terraform configurations")
+}
+
+func TestCASStorageDirectory(t *testing.T) {
+	t.Parallel()
+
+	homeDir, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	expectedCASDir := filepath.Join(homeDir, ".cache", "terragrunt", "cas")
+
+	tmpEnvPath := helpers.CopyEnvironment(t, "fixtures/download")
+	testPath := util.JoinPath(tmpEnvPath, "fixtures/download/local")
+
+	helpers.CleanupTerraformFolder(t, testPath)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd := "terragrunt plan --experiment cas --working-dir " + testPath
+	_ = helpers.RunTerragruntCommand(t, cmd, &stdout, &stderr)
+
+	_, err = os.Stat(expectedCASDir)
+	require.NoError(t, err)
+
+	storeDir := filepath.Join(expectedCASDir, "store")
+	_, err = os.Stat(storeDir)
+	require.NoError(t, err)
 }

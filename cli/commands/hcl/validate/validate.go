@@ -23,6 +23,7 @@ import (
 	"github.com/gruntwork-io/terragrunt/config/hclparse"
 	"github.com/gruntwork-io/terragrunt/configstack"
 	"github.com/gruntwork-io/terragrunt/internal/errors"
+	"github.com/gruntwork-io/terragrunt/internal/report"
 	"github.com/gruntwork-io/terragrunt/internal/view"
 	"github.com/gruntwork-io/terragrunt/internal/view/diagnostic"
 	"github.com/gruntwork-io/terragrunt/options"
@@ -70,7 +71,7 @@ func RunValidate(ctx context.Context, l log.Logger, opts *options.TerragruntOpti
 
 	opts.SkipOutput = true
 	opts.NonInteractive = true
-	opts.RunTerragrunt = func(ctx context.Context, l log.Logger, opts *options.TerragruntOptions) error {
+	opts.RunTerragrunt = func(ctx context.Context, l log.Logger, opts *options.TerragruntOptions, r *report.Report) error {
 		_, err := config.ReadTerragruntConfig(ctx, l, opts, parseOptions)
 		return err
 	}
@@ -100,6 +101,14 @@ func RunValidate(ctx context.Context, l log.Logger, opts *options.TerragruntOpti
 		if err := writeDiagnostics(l, opts, diags); err != nil {
 			return err
 		}
+
+		// If there were diagnostics and stackErr is currently nil,
+		// create a new error to signal overall validation failure.
+		//
+		// This also ensures a non-zero exit code is returned by Terragrunt.
+		if stackErr == nil {
+			stackErr = errors.Errorf("%d HCL validation error(s) found", len(diags))
+		}
 	}
 
 	return stackErr
@@ -123,7 +132,7 @@ func writeDiagnostics(l log.Logger, opts *options.TerragruntOptions, diags diagn
 func RunValidateInputs(ctx context.Context, l log.Logger, opts *options.TerragruntOptions) error {
 	target := run.NewTarget(run.TargetPointGenerateConfig, runValidateInputs)
 
-	return run.RunWithTarget(ctx, l, opts, target)
+	return run.RunWithTarget(ctx, l, opts, report.NewReport(), target)
 }
 
 func runValidateInputs(ctx context.Context, l log.Logger, opts *options.TerragruntOptions, cfg *config.TerragruntConfig) error {
@@ -275,8 +284,8 @@ func getTerraformInputNamesFromEnvVar(opts *options.TerragruntOptions, terragrun
 	)
 
 	for envName := range envVars {
-		if strings.HasPrefix(envName, tfVarPrefix) {
-			inputName := strings.TrimPrefix(envName, tfVarPrefix)
+		if after, ok := strings.CutPrefix(envName, tfVarPrefix); ok {
+			inputName := after
 			out = append(out, inputName)
 		}
 	}
@@ -449,8 +458,8 @@ func GetVarFlagsFromArgList(argList []string) ([]string, []string, error) {
 			vars = append(vars, splitArg[1])
 		}
 
-		if strings.HasPrefix(shlexedArg, "-var-file=") {
-			varFiles = append(varFiles, strings.TrimPrefix(shlexedArg, "-var-file="))
+		if after, ok := strings.CutPrefix(shlexedArg, "-var-file="); ok {
+			varFiles = append(varFiles, after)
 		}
 	}
 

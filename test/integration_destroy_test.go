@@ -225,15 +225,7 @@ func TestPreventDestroyDependenciesIncludedConfig(t *testing.T) {
 	helpers.LogBufferContentsLineByLine(t, destroyAllStdout, "destroy-all stdout")
 	helpers.LogBufferContentsLineByLine(t, destroyAllStderr, "destroy-all stderr")
 
-	require.Error(t, err)
-
-	var multiErrors *errors.MultiError
-
-	if ok := errors.As(err, &multiErrors); ok {
-		err = multiErrors
-	}
-
-	assert.IsType(t, &errors.MultiError{}, err)
+	require.NoError(t, err)
 
 	// Check that modules C, D and E were deleted and modules A and B weren't.
 	for moduleName, modulePath := range modulePaths {
@@ -272,11 +264,6 @@ func TestTerragruntSkipConfirmExternalDependencies(t *testing.T) {
 	helpers.CleanupTerraformFolder(t, tmpEnvPath)
 	testPath := util.JoinPath(tmpEnvPath, testFixtureExternalDependency)
 
-	t.Cleanup(func() {
-		os.RemoveAll(filepath.ToSlash("/tmp/external-46521694"))
-	})
-	require.NoError(t, os.Mkdir(filepath.ToSlash("/tmp/external-46521694"), 0755))
-
 	helpers.CreateGitRepo(t, tmpEnvPath)
 
 	stdout := bytes.Buffer{}
@@ -286,7 +273,18 @@ func TestTerragruntSkipConfirmExternalDependencies(t *testing.T) {
 	oldStdout := os.Stderr
 	os.Stderr = w
 
-	err := helpers.RunTerragruntCommand(t, "terragrunt destroy --working-dir "+testPath, &stdout, &stderr)
+	tmp := t.TempDir()
+
+	err := helpers.RunTerragruntCommand(
+		t,
+		fmt.Sprintf(
+			"terragrunt destroy --feature dep=%s --working-dir %s",
+			tmp,
+			testPath,
+		),
+		&stdout,
+		&stderr,
+	)
 	os.Stderr = oldStdout
 	require.NoError(t, w.Close())
 
@@ -302,7 +300,7 @@ func TestTerragruntSkipConfirmExternalDependencies(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotContains(t, captured, "Should Terragrunt apply the external dependency?")
-	assert.NotContains(t, captured, "/tmp/external1")
+	assert.NotContains(t, captured, tmp)
 }
 
 func TestStorePlanFilesRunAllDestroy(t *testing.T) {

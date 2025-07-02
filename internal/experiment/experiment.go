@@ -23,6 +23,15 @@ const (
 	// CAS is the experiment that enables using the CAS package for git operations
 	// in the catalog command, which provides better performance through content-addressable storage.
 	CAS = "cas"
+	// Report is the experiment that enables the new run report.
+	Report = "report"
+	// RunnerPool is the experiment that allows using a pool of runners for parallel execution.
+	RunnerPool = "runner-pool"
+	// AutoProviderCacheDir is the experiment that automatically enables central
+	// provider caching by setting TF_PLUGIN_CACHE_DIR.
+	//
+	// Only works with OpenTofu version >= 1.10.
+	AutoProviderCacheDir = "auto-provider-cache-dir"
 )
 
 const (
@@ -52,6 +61,15 @@ func NewExperiments() Experiments {
 		},
 		{
 			Name: CAS,
+		},
+		{
+			Name: Report,
+		},
+		{
+			Name: RunnerPool,
+		},
+		{
+			Name: AutoProviderCacheDir,
 		},
 	}
 }

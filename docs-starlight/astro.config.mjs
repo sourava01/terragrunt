@@ -134,7 +134,12 @@ export default defineConfig({
         ],
       }),
     ],
-  }), d2(), partytown({
+  }), d2({
+    // It's recommended that we just skip generation in Vercel,
+    // and generate diagrams locally:
+    // https://astro-d2.vercel.app/guides/how-astro-d2-works/#deployment
+    skipGeneration: !!process.env['VERCEL']
+  }), partytown({
     config: {
       forward: ['dataLayer.push']
     }
@@ -191,6 +196,14 @@ export default defineConfig({
     "/docs/features/auto-retry/": "/docs/features/runtime-control/",
     "/docs/features/provider-cache/": "/docs/features/provider-cache-server/",
     "/docs/features/provider-caching/": "/docs/features/provider-cache-server/",
+
+    // Additional redirects for 404ing URLs
+    "/docs/features/execute-terraform-commands-on-multiple-modules-at-once/": "/docs/features/stacks/",
+    "/docs/getting-started/configuration/": "/docs/reference/hcl/",
+    "/docs/features/before-and-after-hooks/": "/docs/features/hooks/",
+    "/docs/etting-started/configuration/": "/docs/reference/hcl/", // typo in original URL
+    "/docs/features/log-formatting": "/docs/reference/logging/formatting/",
+    "/docs/reference/lock-file-handling/": "/docs/reference/lock-files/",
   },
   vite: {
     plugins: [tailwindcss()],
