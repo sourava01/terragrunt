@@ -68,6 +68,14 @@ func TerragruntConfigAsCty(config *TerragruntConfig) (cty.Value, error) {
 		output[MetadataErrors] = errorsConfigCty
 	}
 
+	mockOutputsConfigCty, err := mockOutputsConfigAsCty(config.MockOutputs)
+	if err != nil {
+		return cty.NilVal, err
+	}
+	if mockOutputsConfigCty != cty.NilVal {
+		output[MetadataMockOutputs] = mockOutputsConfigCty
+	}
+
 	terraformConfigCty, err := terraformConfigAsCty(config.Terraform)
 	if err != nil {
 		return cty.NilVal, err
@@ -479,6 +487,14 @@ type ctyEngineConfig struct {
 	Type    string    `cty:"type"`
 }
 
+// ctyMockOutputsConfig is an alternate representation of MockOutputsConfig
+type ctyMockOutputsConfig struct {
+	Outputs                  cty.Value `cty:"outputs"`
+	AllowedTerraformCommands []string  `cty:"mock_outputs_allowed_terraform_commands"`
+	MergeWithState           *bool     `cty:"mock_outputs_merge_with_state"`
+	MergeStrategyWithState   *string   `cty:"mock_outputs_merge_strategy_with_state"`
+}
+
 // ctyExclude exclude representation for cty.
 type ctyExclude struct {
 	Actions             []string `cty:"actions"`
@@ -542,6 +558,31 @@ func excludeConfigAsCty(config *ExcludeConfig) (cty.Value, error) {
 		If:                  config.If,
 		Actions:             config.Actions,
 		ExcludeDependencies: excludeDependencies,
+	}
+
+	return goTypeToCty(configCty)
+}
+
+// Serialize mockOutputsConfigAsCty to a cty Value.
+func mockOutputsConfigAsCty(config *MockOutputsConfig) (cty.Value, error) {
+	if config == nil {
+		return cty.NilVal, nil
+	}
+
+	var mergeStrategy *string
+	if config.MockOutputsMergeStrategyWithState != nil {
+		val := string(*config.MockOutputsMergeStrategyWithState)
+		mergeStrategy = &val
+	}
+
+	configCty := ctyMockOutputsConfig{
+		AllowedTerraformCommands: *config.MockOutputsAllowedTerraformCommands,
+		MergeWithState:           config.MockOutputsMergeWithState,
+		MergeStrategyWithState:   mergeStrategy,
+	}
+
+	if config.Outputs != nil {
+		configCty.Outputs = *config.Outputs
 	}
 
 	return goTypeToCty(configCty)

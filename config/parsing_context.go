@@ -50,6 +50,14 @@ type ParsingContext struct {
 
 	// `ParserOptions` is used to configure hcl Parser.
 	ParserOptions []hclparse.Option
+
+	// MockOutputs are pre-evaluated mock_outputs that can be used by reference in the code.
+	MockOutputs *MockOutputsConfig
+}
+
+func (ctx ParsingContext) WithMockOutputs(mockOutputs *MockOutputsConfig) *ParsingContext {
+	ctx.MockOutputs = mockOutputs
+	return &ctx
 }
 
 func NewParsingContext(ctx context.Context, l log.Logger, opts *options.TerragruntOptions) *ParsingContext {

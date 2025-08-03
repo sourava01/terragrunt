@@ -182,6 +182,20 @@ func (dep *Dependency) setRenderedOutputs(ctx *ParsingContext, l log.Logger) err
 	return nil
 }
 
+// mergeOutputs merges the given real and mock outputs based on the provided strategy.
+func mergeOutputs(realOutputs, mockOutputs cty.Value, strategy MergeStrategyType) (*cty.Value, error) {
+	switch strategy {
+	case NoMerge:
+		return &realOutputs, nil
+	case ShallowMerge:
+		return shallowMergeCtyMaps(realOutputs, mockOutputs)
+	case DeepMergeMapOnly:
+		return deepMergeCtyMapsMapOnly(mockOutputs, realOutputs)
+	default:
+		return nil, errors.New(InvalidMergeStrategyTypeError(strategy))
+	}
+}
+
 // jsonOutputCache is a map that maps config paths to the outputs so that they can be reused across calls for common
 // modules. We use sync.Map to ensure atomic updates during concurrent access.
 var jsonOutputCache = sync.Map{}
@@ -479,49 +493,77 @@ func getTerragruntOutputIfAppliedElseConfiguredDefault(ctx *ParsingContext, l lo
 		return dependencyConfig.MockOutputs, nil
 	}
 
+	targetConfig := getCleanedTargetConfigPath(dependencyConfig.ConfigPath.AsString(), ctx.TerragruntOptions.TerragruntConfigPath)
+
 	if dependencyConfig.shouldGetOutputs(ctx) {
 		outputVal, isEmpty, err := getTerragruntOutput(ctx, l, dependencyConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		if !isEmpty && dependencyConfig.shouldMergeMockOutputsWithState(ctx) && dependencyConfig.MockOutputs != nil {
-			mockMergeStrategy := dependencyConfig.getMockOutputsMergeStrategy()
-
-			// TODO: Make this exhaustive
-			switch mockMergeStrategy { // nolint:exhaustive
-			case NoMerge:
-				return outputVal, nil
-			case ShallowMerge:
-				return shallowMergeCtyMaps(*outputVal, *dependencyConfig.MockOutputs)
-			case DeepMergeMapOnly:
-				return deepMergeCtyMapsMapOnly(*dependencyConfig.MockOutputs, *outputVal)
-			default:
-				return nil, errors.New(InvalidMergeStrategyTypeError(mockMergeStrategy))
+		if !isEmpty {
+			// If real outputs exist, check for merge strategies.
+			// Precedence is given to the consumer (dependency block).
+			if dependencyConfig.shouldMergeMockOutputsWithState(ctx) && dependencyConfig.MockOutputs != nil {
+				l.Warnf(
+					"Config %s is a dependency of %s and has outputs, but mock outputs are provided in the dependency block with a merge strategy. Returning the merged outputs.",
+					targetConfig,
+					ctx.TerragruntOptions.TerragruntConfigPath,
+				)
+				return mergeOutputs(*outputVal, *dependencyConfig.MockOutputs, dependencyConfig.getMockOutputsMergeStrategy())
 			}
-		} else if !isEmpty {
-			return outputVal, err
+
+			// If the consumer doesn't define a merge, check the provider.
+			dependencyMocks, err := getMockOutputsFromDependency(ctx, l, dependencyConfig)
+			if err != nil {
+				return nil, err
+			}
+			if dependencyMocks.shouldMergeMockOutputsWithState(ctx) && dependencyMocks.Outputs != nil {
+				l.Warnf(
+					"Config %s is a dependency of %s and has outputs, but mock outputs are provided in the dependency's own config with a merge strategy. Returning the merged outputs.",
+					targetConfig,
+					ctx.TerragruntOptions.TerragruntConfigPath,
+				)
+				return mergeOutputs(*outputVal, *dependencyMocks.Outputs, *dependencyMocks.MockOutputsMergeStrategyWithState)
+			}
+
+			// If no merge is specified, return the real outputs.
+			return outputVal, nil
 		}
 	}
 
 	// When we get no output, it can be an indication that either the module has no outputs or the module is not
 	// applied. In either case, check if there are default output values to return. If yes, return that. Else,
 	// return error.
-	targetConfig := getCleanedTargetConfigPath(dependencyConfig.ConfigPath.AsString(), ctx.TerragruntOptions.TerragruntConfigPath)
 
 	if dependencyConfig.shouldReturnMockOutputs(ctx) {
-		l.Warnf("Config %s is a dependency of %s that has no outputs, but mock outputs provided and returning those in dependency output.",
+		l.Warnf("Config %s is a dependency of %s that has no outputs, but mock outputs provided in the dependency block and returning those.",
 			targetConfig,
 			ctx.TerragruntOptions.TerragruntConfigPath,
 		)
-
 		return dependencyConfig.MockOutputs, nil
+	}
+
+	// If we are not allowed to return mocks from the dependency block, check if there are mocks defined in the
+	// dependency's own config.
+	dependencyMocks, err := getMockOutputsFromDependency(ctx, l, dependencyConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if dependencyMocks.shouldReturnMockOutputs(ctx) {
+		l.Warnf(
+			"Config %s is a dependency of %s that has no outputs, but mock outputs provided in the dependency's config and returning those.",
+			targetConfig,
+			ctx.TerragruntOptions.TerragruntConfigPath,
+		)
+		return dependencyMocks.Outputs, nil
 	}
 
 	// At this point, we expect outputs to exist because there is a `dependency` block without skip_outputs = true, and
 	// returning mocks is not allowed. So return a useful error message indicating that we expected outputs, but they
 	// did not exist.
-	err := TerragruntOutputTargetNoOutputs{
+	err = TerragruntOutputTargetNoOutputs{
 		targetName:    dependencyConfig.Name,
 		targetPath:    dependencyConfig.ConfigPath.AsString(),
 		targetConfig:  targetConfig,
@@ -529,6 +571,26 @@ func getTerragruntOutputIfAppliedElseConfiguredDefault(ctx *ParsingContext, l lo
 	}
 
 	return nil, err
+}
+
+// getMockOutputsFromDependency gets the mock_outputs from the dependency's terragrunt.hcl file.
+func getMockOutputsFromDependency(ctx *ParsingContext, l log.Logger, dependencyConfig Dependency) (*MockOutputsConfig, error) {
+	targetConfigPath := getCleanedTargetConfigPath(dependencyConfig.ConfigPath.AsString(), ctx.TerragruntOptions.TerragruntConfigPath)
+	if !util.FileExists(targetConfigPath) {
+		return nil, nil // Return nil if the config doesn't exist, let other parts of the code handle the error
+	}
+
+	l, depOpts, err := cloneTerragruntOptionsForDependency(ctx, l, targetConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	depCtx := ctx.WithDecodeList(TerragruntFlags, TerragruntInputs, MockOutputsBlock).WithTerragruntOptions(depOpts)
+
+	depConfig, err := PartialParseConfigFile(depCtx, l, targetConfigPath, nil)
+	if err != nil {
+		return nil, err
+	}
+	return depConfig.MockOutputs, nil
 }
 
 // We should only return default outputs if the mock_outputs attribute is set, and if we are running one of the

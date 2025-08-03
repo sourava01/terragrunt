@@ -39,6 +39,7 @@ const (
 	EngineBlock
 	ExcludeBlock
 	ErrorsBlock
+	MockOutputsBlock
 )
 
 // terragruntIncludeMultiple is a struct that can be used to only decode the include block with labels.
@@ -120,10 +121,27 @@ type terragruntInputs struct {
 	Remain hcl.Body   `hcl:",remain"`
 }
 
+// terragruntMockOutputs is a struct that can be used to only decode the mock_outputs block.
+type terragruntMockOutputs struct {
+	MockOutputs *MockOutputsConfig `hcl:"mock_outputs,block"`
+	Remain      hcl.Body           `hcl:",remain"`
+}
+
 // terragruntEngine is a struct that can only be used to decode the engine block.
 type terragruntEngine struct {
 	Engine *EngineConfig `hcl:"engine,block"`
 	Remain hcl.Body      `hcl:",remain"`
+}
+
+// A struct that can be used to only partially decode a terragrunt config file to just get the include block
+type PartialTerragruntConfig struct {
+	Include         []terragruntIncludeIgnore `hcl:"include,block"`
+	Terraform       *TerraformConfig          `hcl:"terraform,block"`
+	Dependencies    *ModuleDependencies       `hcl:"dependencies,block"`
+	Dependency      []Dependency              `hcl:"dependency,block"`
+	TerragruntFlags *terragruntFlags          // Inherited, so no need for hcl tags
+	Locals          *terragruntLocal          `hcl:"locals,block"`
+	MockOutputs     *MockOutputsConfig        `hcl:"mock_outputs,block"`
 }
 
 // DecodeBaseBlocks takes in a parsed HCL2 file and decodes the base blocks. Base blocks are blocks that should always
@@ -636,6 +654,18 @@ func PartialParseConfig(ctx *ParsingContext, l log.Logger, file *hclparse.File, 
 				output.Errors = decoded.Errors
 			}
 
+		case MockOutputsBlock:
+			decoded := terragruntMockOutputs{}
+			err := file.Decode(&decoded, evalParsingContext)
+			if err != nil {
+				return nil, err
+			}
+			if decoded.MockOutputs != nil {
+				// Since we are doing a partial parse, we only care about the mock_outputs block,
+				// so we can just assign it directly to the MockOutputs field.
+				// a full parse will handle the merging.
+				output.MockOutputs = decoded.MockOutputs
+			}
 		default:
 			return nil, InvalidPartialBlockName{decode}
 		}

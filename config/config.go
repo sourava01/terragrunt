@@ -89,6 +89,7 @@ const (
 	MetadataValues                      = "values"
 	MetadataStack                       = "stack"
 	MetadataUnit                        = "unit"
+	MetadataMockOutputs                 = "mock_outputs"
 )
 
 var (
@@ -170,6 +171,7 @@ type TerragruntConfig struct {
 	FeatureFlags                FeatureFlags
 	DependentModulesPath        []*string
 	IsPartial                   bool
+	MockOutputs                 *MockOutputsConfig
 }
 
 func (cfg *TerragruntConfig) GetRemoteState(l log.Logger, opts *options.TerragruntOptions) (*remotestate.RemoteState, error) {
@@ -664,6 +666,7 @@ type terragruntConfigFile struct {
 	RemoteState     *remotestate.ConfigFile `hcl:"remote_state,block"`
 	RemoteStateAttr *cty.Value              `hcl:"remote_state,optional"`
 
+	MockOutputs              *MockOutputsConfig  `hcl:"mock_outputs,block"`
 	Dependencies             *ModuleDependencies `hcl:"dependencies,block"`
 	DownloadDir              *string             `hcl:"download_dir,attr"`
 	PreventDestroy           *bool               `hcl:"prevent_destroy,attr"`
@@ -717,6 +720,38 @@ type terragruntLocal struct {
 type terragruntIncludeIgnore struct {
 	Remain hcl.Body `hcl:",remain"`
 	Name   string   `hcl:"name,label"`
+}
+
+// A struct that is used to represent a mock_outputs block in a terragrunt.hcl file.
+type MockOutputsConfig struct {
+	Outputs                             *cty.Value         `hcl:"outputs,attr"`
+	MockOutputsAllowedTerraformCommands *[]string          `hcl:"mock_outputs_allowed_terraform_commands,attr"`
+	// MockOutputsMergeWithState is deprecated. Use MockOutputsMergeStrategyWithState
+	MockOutputsMergeWithState           *bool              `hcl:"mock_outputs_merge_with_state,attr"`
+	MockOutputsMergeStrategyWithState   *MergeStrategyType `hcl:"mock_outputs_merge_strategy_with_state"`
+	Remain                              hcl.Body           `hcl:",remain"`
+}
+
+func (moc *MockOutputsConfig) shouldReturnMockOutputs(ctx *ParsingContext) bool {
+	if moc == nil {
+		return false
+	}
+
+	if moc.MockOutputsAllowedTerraformCommands == nil {
+		return true
+	}
+	return util.ListContainsElement(*moc.MockOutputsAllowedTerraformCommands, ctx.TerragruntOptions.OriginalTerraformCommand)
+}
+
+func (moc *MockOutputsConfig) shouldMergeMockOutputsWithState(ctx *ParsingContext) bool {
+	if moc == nil {
+		return false
+	}
+
+	if moc.MockOutputsMergeWithState == nil {
+		return false
+	}
+	return *moc.MockOutputsMergeWithState
 }
 
 // Struct used to parse generate blocks. This will later be converted to GenerateConfig structs so that we can go
@@ -1325,6 +1360,13 @@ func ParseConfig(ctx *ParsingContext, l log.Logger, file *hclparse.File, include
 		errs = errs.Append(err)
 	}
 
+	// Now that the locals are parsed, we can decode the mock_outputs block
+	mockOutputs, err := decodeMockOutputs(ctx, l, file, evalContext)
+	if err != nil {
+		errs = errs.Append(err)
+	}
+	ctx = ctx.WithMockOutputs(mockOutputs)
+
 	// Decode the rest of the config, passing in this config's `include` block or the child's `include` block, whichever
 	// is appropriate
 	terragruntConfigFile, err := decodeAsTerragruntConfigFile(ctx, l, file, evalContext)
@@ -1363,6 +1405,28 @@ func ParseConfig(ctx *ParsingContext, l log.Logger, file *hclparse.File, include
 	}
 
 	return config, errs.ErrorOrNil()
+}
+
+// decodeMockOutputs is a helper function that decodes the `mock_outputs` block in the given config file.
+// This is done separately so that we can have a predictable order of parsing, which is important because the `mock_outputs`
+// block can reference locals.
+func decodeMockOutputs(ctx *ParsingContext, l log.Logger, file *hclparse.File, evalContext *hcl.EvalContext) (*MockOutputsConfig, error) {
+	block, err := file.Blocks(MetadataMockOutputs, false)
+	if err != nil {
+		return nil, err
+	}
+	if len(block) == 0 {
+		return nil, nil
+	}
+	if len(block) > 1 {
+		return nil, errors.New(fmt.Sprintf("only one mock_outputs block is allowed per config file, but found %d in %s", len(block), file.ConfigPath))
+	}
+
+	decoded := MockOutputsConfig{}
+	if err := file.Decode(&decoded, evalContext); err != nil {
+		return nil, err
+	}
+	return &decoded, nil
 }
 
 // detectDeprecatedConfigurations detects if deprecated configurations are used in the given HCL file.
@@ -1835,6 +1899,11 @@ func convertToTerragruntConfig(ctx *ParsingContext, configPath string, terragrun
 
 		terragruntConfig.Locals = localsParsed
 		terragruntConfig.SetFieldMetadataMap(MetadataLocals, localsParsed, defaultMetadata)
+	}
+
+	if ctx.MockOutputs != nil {
+		terragruntConfig.MockOutputs = ctx.MockOutputs
+		terragruntConfig.SetFieldMetadata(MetadataMockOutputs, defaultMetadata)
 	}
 
 	return terragruntConfig, errs.ErrorOrNil()
